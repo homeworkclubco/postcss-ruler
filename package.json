@@ -1,6 +1,6 @@
 {
   "name": "postcss-ruler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PostCSS plugin to generate fluid scales and values.",
   "main": "index.js",
   "files": [
