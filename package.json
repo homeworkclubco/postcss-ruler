@@ -1,8 +1,23 @@
 {
   "name": "postcss-ruler",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "PostCSS plugin to generate fluid scales and values.",
-  "keywords": ["postcss", "css", "postcss-plugin", "postcss-ruler"],
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "postcss",
+    "css",
+    "postcss-plugin",
+    "postcss-ruler",
+    "fluid",
+    "clamp",
+    "responsive",
+    "typography"
+  ],
   "scripts": {
     "unit": "node --test index.test.js",
     "test": "npm run unit && eslint ."
@@ -28,6 +43,12 @@
       "node": true,
       "es6": true
     },
-    "extends": ["eslint:recommended"]
+    "extends": [
+      "eslint:recommended"
+    ]
+  },
+  "dependencies": {
+    "postcss-value-parser": "^4.2.0",
+    "prettier": "^3.6.2"
   }
 }
