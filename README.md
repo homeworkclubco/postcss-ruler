@@ -2,8 +2,19 @@
 
 A PostCSS plugin that generates fluid CSS scales and values using the `clamp()` function. Create responsive typography and spacing that scales smoothly between viewport sizes.
 
-## Installation
+**Inspired by [Utopia](https://utopia.fyi/)**, but designed for real-world design collaboration. Instead of strict programmatic scales, postcss-ruler lets you define exact min and max pixel values for each size. This gives you the flexibility to match design specs from tools like Figma while still getting fluid scaling behavior.
 
+## Why postcss-ruler?
+
+Working with design teams often means dealing with sizes that don't follow perfect mathematical ratios. A designer might spec `16px → 24px` for one size and `32px → 56px` for another based on visual harmony rather than a type scale.
+
+postcss-ruler embraces this reality. You get:
+- **Fine-tuned control**: Set exact min and max values per size
+- **Design tool compatibility**: Match your Figma specs precisely
+- **Fluid behavior**: Smooth scaling between breakpoints via `clamp()`
+- **Cross pairs**: Generate spacing between any two sizes (explained below)
+
+## Installation
 ```bash
 npm install postcss-ruler
 ```
@@ -11,7 +22,6 @@ npm install postcss-ruler
 ## Usage
 
 Add the plugin to your PostCSS configuration:
-
 ```javascript
 // postcss.config.js
 module.exports = {
@@ -25,26 +35,11 @@ module.exports = {
 }
 ```
 
-Or in `.postcssrc`:
-
-```json
-{
-  "plugins": {
-    "postcss-ruler": {
-      "minWidth": 320,
-      "maxWidth": 1760,
-      "generateAllCrossPairs": false
-    }
-  }
-}
-```
-
 ## Features
 
 ### 1. At-Rule Mode: Generate Fluid Scale
 
 Create multiple CSS custom properties from named size pairs:
-
 ```css
 @ruler scale({
   minWidth: 320,
@@ -62,7 +57,6 @@ Create multiple CSS custom properties from named size pairs:
 ```
 
 **Generates:**
-
 ```css
 --space-xs: clamp(0.5rem, 0.4545vw + 0.3636rem, 1rem);
 --space-sm: clamp(1rem, 0.4545vw + 0.8636rem, 1.5rem);
@@ -71,19 +65,15 @@ Create multiple CSS custom properties from named size pairs:
 --space-xl: clamp(3rem, 0.9091vw + 2.7273rem, 4rem);
 ```
 
-**Usage in CSS:**
+### Understanding Cross Pairs
 
-```css
-.container {
-  padding: var(--space-md);
-  gap: var(--space-sm);
-}
-```
+Cross pairs create fluid values between any two sizes in your scale. This is useful for spacing that needs to span multiple steps.
 
-#### Cross Pairs
+For example, if you have `xs: [8, 16]` and `lg: [32, 48]`, a cross pair `xs-lg` would scale from `8px → 48px`. This gives you a larger range of motion than using `xs` or `lg` alone.
 
-Enable `generateAllCrossPairs: true` to create additional combinations between all defined pairs:
+**Without cross pairs**, you only get the sizes you explicitly define.
 
+**With `generateAllCrossPairs: true`**, you get every possible combination:
 ```css
 @ruler scale({
   prefix: 'space',
@@ -96,21 +86,29 @@ Enable `generateAllCrossPairs: true` to create additional combinations between a
 });
 ```
 
-**Generates base pairs plus cross combinations:**
-
+**Generates:**
 ```css
---space-xs: clamp(...);
---space-md: clamp(...);
---space-lg: clamp(...);
---space-xs-md: clamp(0.5rem, 1.3636vw + 0.3636rem, 2rem);
---space-xs-lg: clamp(0.5rem, 2.2727vw + 0.3636rem, 3rem);
---space-md-lg: clamp(1.5rem, 0.9091vw + 1.3636rem, 3rem);
+/* Your defined pairs */
+--space-xs: clamp(0.5rem, ...);
+--space-md: clamp(1.5rem, ...);
+--space-lg: clamp(2rem, ...);
+
+/* All cross combinations */
+--space-xs-md: clamp(0.5rem, 1.3636vw + 0.3636rem, 2rem);    /* 8px → 32px */
+--space-xs-lg: clamp(0.5rem, 2.2727vw + 0.3636rem, 3rem);    /* 8px → 48px */
+--space-md-lg: clamp(1.5rem, 0.9091vw + 1.3636rem, 3rem);    /* 24px → 48px */
+```
+
+**Use case**: Section padding that needs more dramatic scaling than your base sizes allow.
+```css
+.hero {
+  padding-block: var(--space-md-xl); /* Scales across a wider range */
+}
 ```
 
 ### 2. Inline Mode: Fluid Function
 
 Convert individual values directly to `clamp()` functions:
-
 ```css
 .element {
   /* Uses default minWidth/maxWidth from config */
@@ -125,7 +123,6 @@ Convert individual values directly to `clamp()` functions:
 ```
 
 **Generates:**
-
 ```css
 .element {
   font-size: clamp(1rem, 0.4545vw + 0.8636rem, 1.5rem);
