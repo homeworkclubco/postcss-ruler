@@ -8,10 +8,11 @@ postcss-ruler is a PostCSS plugin that generates fluid CSS scales and values usi
 
 ## Core Architecture
 
-The plugin operates in two modes:
+The plugin operates in three modes:
 
-1. **At-rule mode**: `@ruler scale()` - Generates multiple CSS custom properties from named pairs
-2. **Inline mode**: `ruler.fluid(minSize, maxSize, minWidth?, maxWidth?)` - Converts inline function calls directly to `clamp()` values
+1. **Scale generation**: `@ruler scale()` - Generates multiple CSS custom properties from named pairs
+2. **Utility class generation**: `@ruler utility()` - Generates utility classes from previously defined scales
+3. **Inline mode**: `ruler.fluid(minSize, maxSize, minWidth?, maxWidth?)` - Converts inline function calls directly to `clamp()` values
 
 ### Key Components
 
@@ -31,7 +32,16 @@ The plugin operates in two modes:
 - Generates CSS custom properties in format: `--{prefix}-{label}: clamp(...)`
 - When `generateAllCrossPairs: true`, creates additional cross-combinations between all defined pairs
 
-**Declaration processing** (`processFluidDeclaration`, index.js:231):
+**Utility class generation** (`processUtilityAtRule`, index.js:291):
+- Parses `@ruler utility()` parameters using `postcss-value-parser`
+- Accepts configuration: `selector`, `property`, `scale`, and `generateAllCrossPairs`
+- References previously defined scales by their `prefix` name
+- Generates CSS rules with selectors in format: `{selector}-{label}`
+- Supports any valid CSS selector pattern including PostCSS nesting syntax with `&`
+- Property can be a single value or array of properties
+- Stores scales in memory during PostCSS processing for reference by utility at-rules
+
+**Declaration processing** (`processFluidDeclaration`, index.js:359):
 - Walks declaration values to find `ruler.fluid()` function calls
 - Detects pattern: word "ruler", div ".", function "fluid"
 - Replaces `ruler.fluid(...)` with calculated `clamp()` value in-place
@@ -58,11 +68,11 @@ Tests use Node's built-in test runner (`node:test`). Test structure:
 - Use `run(input, output, opts)` helper function
 - Verify CSS output and check for warnings
 
-The test file (index.test.js) currently has placeholder structure - actual tests need to be written.
+The test file (index.test.js) includes comprehensive tests for all plugin features including scale generation, utility class generation, inline functions, and various selector patterns.
 
 ## Plugin Usage Patterns
 
-**At-rule syntax**:
+**Scale generation syntax**:
 ```css
 @ruler scale({
   minWidth: 320,
@@ -75,6 +85,58 @@ The test file (index.test.js) currently has placeholder structure - actual tests
     "md": [24, 32]
   }
 });
+/* Generates: --space-xs, --space-sm, --space-md custom properties */
+```
+
+**Utility class generation syntax**:
+```css
+/* Basic class selector */
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'space'
+});
+/* Generates: .gap-xs, .gap-sm, .gap-md utility classes */
+
+/* Nested selector with & */
+@ruler utility({
+  selector: '&.active',
+  property: 'gap',
+  scale: 'space'
+});
+/* Generates: &.active-xs, &.active-sm, &.active-md (for PostCSS nesting) */
+
+/* Multiple classes */
+@ruler utility({
+  selector: '.container.space',
+  property: 'padding',
+  scale: 'space'
+});
+/* Generates: .container.space-xs, .container.space-sm, etc. */
+
+/* ID selector */
+@ruler utility({
+  selector: '#section',
+  property: 'margin',
+  scale: 'space'
+});
+/* Generates: #section-xs, #section-sm, #section-md */
+
+/* Parent context */
+@ruler utility({
+  selector: '.container &',
+  property: 'gap',
+  scale: 'space'
+});
+/* Generates: .container &-xs, .container &-sm, .container &-md */
+
+/* Multiple properties */
+@ruler utility({
+  selector: '.p-block',
+  property: ["padding-top", "padding-bottom"],
+  scale: 'space'
+});
+/* Each utility class gets all specified properties */
 ```
 
 **Inline function syntax**:
@@ -94,3 +156,12 @@ The test file (index.test.js) currently has placeholder structure - actual tests
 - The `generateAllCrossPairs` feature creates combinations like `xs-md`, `xs-lg`, `sm-lg` from defined pairs
 - Inline function detection looks for the pattern: word "ruler" + div "." + function "fluid"
 - The dot separator is parsed as a 'div' type node by postcss-value-parser, not a 'word' node
+
+### Utility Class Generation Details
+- Scales must be defined with `@ruler scale()` before being referenced in `@ruler utility()`
+- The `selector` parameter accepts any valid CSS selector pattern
+- The plugin appends `-${label}` to the selector (e.g., `.gap` becomes `.gap-xs`, `.gap-sm`)
+- Supports PostCSS nesting syntax - `&` characters are preserved in the output
+- The `property` parameter can be a single string or an array of property names
+- When `generateAllCrossPairs: false` is set on the utility, cross-pair classes are excluded even if the scale has them
+- Scales are stored in memory during PostCSS processing and cleared after each run

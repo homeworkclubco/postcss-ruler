@@ -37,7 +37,7 @@ module.exports = {
 
 ## Features
 
-### 1. At-Rule Mode: Generate Fluid Scale
+### 1. Scale Generation: Create Fluid Scales
 
 Create multiple CSS custom properties from named size pairs:
 ```css
@@ -106,7 +106,81 @@ For example, if you have `xs: [8, 16]` and `lg: [32, 48]`, a cross pair `xs-lg` 
 }
 ```
 
-### 2. Inline Mode: Fluid Function
+### 2. Utility Class Generation: Auto-Generate Utility Classes
+
+Generate utility classes from your defined scales with complete selector flexibility:
+
+```css
+@ruler scale({
+  prefix: 'space',
+  pairs: {
+    "xs": [8, 16],
+    "sm": [16, 24],
+    "md": [24, 32]
+  }
+});
+
+/* Basic class selector */
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'space'
+});
+
+/* Nested selector with & (for PostCSS nesting) */
+@ruler utility({
+  selector: '&.active',
+  property: 'padding',
+  scale: 'space'
+});
+
+/* Multiple properties */
+@ruler utility({
+  selector: '.p-block',
+  property: ['padding-top', 'padding-bottom'],
+  scale: 'space'
+});
+```
+
+**Generates:**
+```css
+--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+--space-md: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+
+.gap-xs { gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem) }
+.gap-sm { gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem) }
+.gap-md { gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem) }
+
+&.active-xs { padding: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem) }
+&.active-sm { padding: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem) }
+&.active-md { padding: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem) }
+
+.p-block-xs {
+  padding-top: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+  padding-bottom: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}
+/* ... */
+```
+
+**Supported selector patterns:**
+- **Class selectors**: `.gap` → `.gap-xs`, `.gap-sm`, `.gap-md`
+- **Nested with &**: `&.active` → `&.active-xs`, `&.active-sm` (PostCSS nesting)
+- **Multiple classes**: `.container.space` → `.container.space-xs`, etc.
+- **ID selectors**: `#section` → `#section-xs`, `#section-sm`
+- **Element selectors**: `section` → `section-xs`, `section-sm`
+- **Parent context**: `.container &` → `.container &-xs`, etc.
+
+**Utility options:**
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `selector` | string | Yes | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
+| `property` | string or array | Yes | CSS property name(s) to apply the scale values to |
+| `scale` | string | Yes | Name of a previously defined scale (the `prefix` value) |
+| `generateAllCrossPairs` | boolean | No | Include/exclude cross-pairs (overrides scale default) |
+
+### 3. Inline Mode: Fluid Function
 
 Convert individual values directly to `clamp()` functions:
 ```css
@@ -166,6 +240,15 @@ ruler.fluid(minSize, maxSize[, minWidth, maxWidth])
 | `minWidth` | number | No | Minimum viewport width (uses config default) |
 | `maxWidth` | number | No | Maximum viewport width (uses config default) |
 
+### Utility Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `selector` | string | required | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
+| `property` | string or array | required | CSS property name(s) to apply the scale values to |
+| `scale` | string | required | Name of a previously defined scale (the `prefix` value) |
+| `generateAllCrossPairs` | boolean | No | Include/exclude cross-pairs (overrides scale default) |
+
 ## How It Works
 
 The plugin uses linear interpolation to create fluid values that scale smoothly between viewport sizes:
@@ -188,6 +271,62 @@ At 1040px viewport: `1.3333rem` (≈21.3px)
 At 1760px viewport: `1.5rem` (24px)
 
 ## Use Cases
+
+### Utility-First Workflow with Fluid Scales
+
+Generate a complete set of utility classes from your design system:
+
+```css
+@ruler scale({
+  prefix: 'space',
+  generateAllCrossPairs: true,
+  pairs: {
+    "xs": [8, 16],
+    "sm": [12, 20],
+    "md": [16, 28],
+    "lg": [24, 40],
+    "xl": [32, 56]
+  }
+});
+
+/* Gap utilities */
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'space'
+});
+
+/* Padding utilities */
+@ruler utility({
+  selector: '.p',
+  property: 'padding',
+  scale: 'space'
+});
+
+/* Margin utilities */
+@ruler utility({
+  selector: '.m',
+  property: 'margin',
+  scale: 'space'
+});
+
+/* Stack spacing (for flow layout) */
+@ruler utility({
+  selector: '.stack > * + *',
+  property: 'margin-top',
+  scale: 'space'
+});
+```
+
+Use in your HTML:
+```html
+<section class="p-lg gap-md">
+  <div class="stack gap-sm">
+    <h2>Heading</h2>
+    <p>Content that scales smoothly</p>
+  </div>
+</section>
+```
 
 ### Responsive Typography
 

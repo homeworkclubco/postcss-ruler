@@ -11,6 +11,9 @@ module.exports = opts => {
     };
     const config = Object.assign(DEFAULTS, opts);
 
+    // Storage for generated scales
+    const scales = {};
+
     /**
      * Converts pixels to r]em units
      * @param {number} px - Pixel value to convert
@@ -113,7 +116,6 @@ module.exports = opts => {
             minWidth: config.minWidth,
             maxWidth: config.maxWidth,
             pairs: {},
-            relativeTo: 'viewport',
             prefix: 'space',
             generateAllCrossPairs: config.generateAllCrossPairs,
         };
@@ -132,11 +134,7 @@ module.exports = opts => {
                     i++;
                     break;
                 case 'prefix':
-                    clampsParams.prefix = value.replace(/['\"]/g, '');
-                    i++;
-                    break;
-                case 'relativeTo':
-                    clampsParams.relativeTo = value.replace(/['\"]/g, '');
+                    clampsParams.prefix = value.replace(/['"]/g, '');
                     i++;
                     break;
                 case 'generateAllCrossPairs':
@@ -188,6 +186,61 @@ module.exports = opts => {
     };
 
     /**
+     * Parses parameters from @ruler utility() at-rule
+     * @param {Array} params - Parsed parameter nodes
+     * @returns {Object} Parsed configuration object
+     */
+    const parseUtilityParams = params => {
+        const utilityParams = {
+            selector: null,
+            property: null,
+            scale: null,
+            generateAllCrossPairs: null,
+        };
+
+        for (let i = 0; i < params.length; i++) {
+            const param = params[i];
+            const nextParam = params[i + 1];
+            if (!param || !nextParam) continue;
+            const key = param.value;
+            let value = nextParam.value.replace(/[:,]/g, '');
+
+            switch (key) {
+                case 'selector':
+                case 'scale':
+                    utilityParams[key] = value.replace(/['"]/g, '');
+                    i++;
+                    break;
+                case 'property':
+                    // Check if it's an array (next token is '[')
+                    if (nextParam.value === '[') {
+                        // It's an array - collect values until we hit ']'
+                        const arrayValues = [];
+                        i += 2; // Skip 'property' and '['
+                        while (i < params.length && params[i].value !== ']') {
+                            if (params[i].type === 'string') {
+                                arrayValues.push(params[i].value);
+                            }
+                            i++;
+                        }
+                        utilityParams.property = arrayValues;
+                    } else {
+                        // Single value
+                        utilityParams.property = value.replace(/['"]/g, '');
+                        i++;
+                    }
+                    break;
+                case 'generateAllCrossPairs':
+                    utilityParams.generateAllCrossPairs = value === 'true';
+                    i++;
+                    break;
+            }
+        }
+
+        return utilityParams;
+    };
+
+    /**
      * Processes @fluid at-rule and generates CSS custom properties
      * @param {Object} atRule - PostCSS at-rule node
      */
@@ -217,11 +270,90 @@ module.exports = opts => {
             pairs: clampPairs,
         });
 
-        const response = clampScale
-            .map(step => `--${clampsParams.prefix}-${step.label}: ${step.clamp};`)
-            .join('\n');
+        // Store the scale for later use by utility classes
+        scales[clampsParams.prefix] = clampScale;
 
-        atRule.replaceWith(response);
+        const postcss = require('postcss');
+        const root = postcss.root();
+
+        clampScale.forEach(step => {
+            root.append(
+                postcss.decl({
+                    prop: `--${clampsParams.prefix}-${step.label}`,
+                    value: step.clamp,
+                })
+            );
+        });
+
+        atRule.replaceWith(root.nodes);
+    };
+
+    /**
+     * Processes @ruler utility() at-rule and generates utility classes
+     * @param {Object} atRule - PostCSS at-rule node
+     */
+    const processUtilityAtRule = atRule => {
+        const postcss = require('postcss');
+        const { nodes } = CSSValueParser(atRule.params);
+        const params = nodes[0].nodes.filter(
+            x =>
+                ['word', 'string', 'function'].includes(x.type) &&
+                x.value !== '{' &&
+                x.value !== '}'
+        );
+
+        const utilityParams = parseUtilityParams(params);
+
+        // Validate required parameters
+        if (!utilityParams.selector) {
+            throw new Error(
+                '[postcss-ruler] @ruler utility() requires a "selector" parameter'
+            );
+        }
+        if (!utilityParams.property) {
+            throw new Error(
+                '[postcss-ruler] @ruler utility() requires a "property" parameter'
+            );
+        }
+        if (!utilityParams.scale) {
+            throw new Error(
+                '[postcss-ruler] @ruler utility() requires a "scale" parameter'
+            );
+        }
+
+        // Check if scale exists
+        const scale = scales[utilityParams.scale];
+        if (!scale) {
+            throw new Error(
+                `[postcss-ruler] Scale "${utilityParams.scale}" not found. Define it with @ruler scale() first.`
+            );
+        }
+
+        // Determine which scale items to use
+        let scaleItems = scale;
+        if (utilityParams.generateAllCrossPairs === false) {
+            // Filter out cross-pairs (items with hyphens in label)
+            scaleItems = scale.filter(item => !item.label.includes('-'));
+        }
+
+        // Normalize property to array
+        const properties = Array.isArray(utilityParams.property)
+            ? utilityParams.property
+            : [utilityParams.property];
+
+        // Generate utility classes as PostCSS nodes
+        const rules = scaleItems.map(item => {
+            const selector = `${utilityParams.selector}-${item.label}`;
+            const rule = postcss.rule({ selector });
+
+            properties.forEach(prop => {
+                rule.append(postcss.decl({ prop, value: item.clamp }));
+            });
+
+            return rule;
+        });
+
+        atRule.replaceWith(rules);
     };
 
     /**
@@ -267,6 +399,8 @@ module.exports = opts => {
             ruler: atRule => {
                 if (atRule.params.startsWith('scale(')) {
                     return processFluidAtRule(atRule);
+                } else if (atRule.params.startsWith('utility(')) {
+                    return processUtilityAtRule(atRule);
                 }
             },
         },
