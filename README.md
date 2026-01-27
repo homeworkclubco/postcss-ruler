@@ -9,12 +9,14 @@ A PostCSS plugin that generates fluid CSS scales and values using the `clamp()` 
 Working with design teams often means dealing with sizes that don't follow perfect mathematical ratios. A designer might spec `16px → 24px` for one size and `32px → 56px` for another based on visual harmony rather than a type scale.
 
 postcss-ruler embraces this reality. You get:
+
 - **Fine-tuned control**: Set exact min and max values per size
 - **Design tool compatibility**: Match your Figma specs precisely
 - **Fluid behavior**: Smooth scaling between breakpoints via `clamp()`
 - **Cross pairs**: Generate spacing between any two sizes (explained below)
 
 ## Installation
+
 ```bash
 npm install postcss-ruler
 ```
@@ -22,17 +24,18 @@ npm install postcss-ruler
 ## Usage
 
 Add the plugin to your PostCSS configuration:
+
 ```javascript
 // postcss.config.js
 module.exports = {
   plugins: {
-    'postcss-ruler': {
-      minWidth: 320,    // Default minimum viewport width
-      maxWidth: 1760,   // Default maximum viewport width
-      generateAllCrossPairs: false
-    }
-  }
-}
+    "postcss-ruler": {
+      minWidth: 320, // Default minimum viewport width
+      maxWidth: 1760, // Default maximum viewport width
+      generateAllCrossPairs: false,
+    },
+  },
+};
 ```
 
 ## Features
@@ -40,6 +43,7 @@ module.exports = {
 ### 1. Scale Generation: Create Fluid Scales
 
 Create multiple CSS custom properties from named size pairs:
+
 ```css
 @ruler scale({
   minWidth: 320,
@@ -57,6 +61,7 @@ Create multiple CSS custom properties from named size pairs:
 ```
 
 **Generates:**
+
 ```css
 --space-xs: clamp(0.5rem, 0.4545vw + 0.3636rem, 1rem);
 --space-sm: clamp(1rem, 0.4545vw + 0.8636rem, 1.5rem);
@@ -74,6 +79,7 @@ For example, if you have `xs: [8, 16]` and `lg: [32, 48]`, a cross pair `xs-lg` 
 **Without cross pairs**, you only get the sizes you explicitly define.
 
 **With `generateAllCrossPairs: true`**, you get every possible combination:
+
 ```css
 @ruler scale({
   prefix: 'space',
@@ -87,6 +93,7 @@ For example, if you have `xs: [8, 16]` and `lg: [32, 48]`, a cross pair `xs-lg` 
 ```
 
 **Generates:**
+
 ```css
 /* Your defined pairs */
 --space-xs: clamp(0.5rem, ...);
@@ -94,12 +101,13 @@ For example, if you have `xs: [8, 16]` and `lg: [32, 48]`, a cross pair `xs-lg` 
 --space-lg: clamp(2rem, ...);
 
 /* All cross combinations */
---space-xs-md: clamp(0.5rem, 1.3636vw + 0.3636rem, 2rem);    /* 8px → 32px */
---space-xs-lg: clamp(0.5rem, 2.2727vw + 0.3636rem, 3rem);    /* 8px → 48px */
---space-md-lg: clamp(1.5rem, 0.9091vw + 1.3636rem, 3rem);    /* 24px → 48px */
+--space-xs-md: clamp(0.5rem, 1.3636vw + 0.3636rem, 2rem); /* 8px → 32px */
+--space-xs-lg: clamp(0.5rem, 2.2727vw + 0.3636rem, 3rem); /* 8px → 48px */
+--space-md-lg: clamp(1.5rem, 0.9091vw + 1.3636rem, 3rem); /* 24px → 48px */
 ```
 
 **Use case**: Section padding that needs more dramatic scaling than your base sizes allow.
+
 ```css
 .hero {
   padding-block: var(--space-md-xl); /* Scales across a wider range */
@@ -143,27 +151,41 @@ Generate utility classes from your defined scales with complete selector flexibi
 ```
 
 **Generates:**
+
 ```css
 --space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
 --space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
 --space-md: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
 
-.gap-xs { gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem) }
-.gap-sm { gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem) }
-.gap-md { gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem) }
+.gap-xs {
+  gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+}
+.gap-sm {
+  gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+}
+.gap-md {
+  gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+}
 
-&.active-xs { padding: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem) }
-&.active-sm { padding: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem) }
-&.active-md { padding: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem) }
+&.active-xs {
+  padding: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+}
+&.active-sm {
+  padding: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+}
+&.active-md {
+  padding: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+}
 
 .p-block-xs {
   padding-top: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
-  padding-bottom: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+  padding-bottom: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
 }
 /* ... */
 ```
 
 **Supported selector patterns:**
+
 - **Class selectors**: `.gap` → `.gap-xs`, `.gap-sm`, `.gap-md`
 - **Nested with &**: `&.active` → `&.active-xs`, `&.active-sm` (PostCSS nesting)
 - **Multiple classes**: `.container.space` → `.container.space-xs`, etc.
@@ -173,16 +195,17 @@ Generate utility classes from your defined scales with complete selector flexibi
 
 **Utility options:**
 
-| Option | Type | Required | Description |
-|--------|------|----------|-------------|
-| `selector` | string | Yes | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
-| `property` | string or array | Yes | CSS property name(s) to apply the scale values to |
-| `scale` | string | Yes | Name of a previously defined scale (the `prefix` value) |
-| `generateAllCrossPairs` | boolean | No | Include/exclude cross-pairs (overrides scale default) |
+| Option                  | Type            | Required | Description                                                           |
+| ----------------------- | --------------- | -------- | --------------------------------------------------------------------- |
+| `selector`              | string          | Yes      | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
+| `property`              | string or array | Yes      | CSS property name(s) to apply the scale values to                     |
+| `scale`                 | string          | Yes      | Name of a previously defined scale (the `prefix` value)               |
+| `generateAllCrossPairs` | boolean         | No       | Include/exclude cross-pairs (overrides scale default)                 |
 
 ### 3. Inline Mode: Fluid Function
 
 Convert individual values directly to `clamp()` functions:
+
 ```css
 .element {
   /* Uses default minWidth/maxWidth from config */
@@ -197,11 +220,13 @@ Convert individual values directly to `clamp()` functions:
 ```
 
 **Generates:**
+
 ```css
 .element {
   font-size: clamp(1rem, 0.4545vw + 0.8636rem, 1.5rem);
   padding: clamp(0.75rem, 0.9091vw + 0.4773rem, 1.25rem);
-  margin: clamp(0.5rem, 0.4545vw + 0.3636rem, 1rem) clamp(1rem, 0.9091vw + 0.7273rem, 2rem);
+  margin: clamp(0.5rem, 0.4545vw + 0.3636rem, 1rem)
+    clamp(1rem, 0.9091vw + 0.7273rem, 2rem);
 }
 ```
 
@@ -209,23 +234,23 @@ Convert individual values directly to `clamp()` functions:
 
 ### Plugin Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `minWidth` | number | `320` | Default minimum viewport width in pixels |
-| `maxWidth` | number | `1760` | Default maximum viewport width in pixels |
+| Option                  | Type    | Default | Description                               |
+| ----------------------- | ------- | ------- | ----------------------------------------- |
+| `minWidth`              | number  | `320`   | Default minimum viewport width in pixels  |
+| `maxWidth`              | number  | `1760`  | Default maximum viewport width in pixels  |
 | `generateAllCrossPairs` | boolean | `false` | Generate cross-combinations in scale mode |
 
 ### At-Rule Options
 
 All options can be overridden per `@ruler scale()` declaration:
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `minWidth` | number | `320` | Minimum viewport width for this scale |
-| `maxWidth` | number | `1760` | Maximum viewport width for this scale |
-| `prefix` | string | `"space"` | Prefix for generated CSS custom properties |
-| `generateAllCrossPairs` | boolean | `false` | Generate cross-combinations for this scale |
-| `pairs` | object | required | Size pairs as `"name": [min, max]` |
+| Option                  | Type    | Default   | Description                                |
+| ----------------------- | ------- | --------- | ------------------------------------------ |
+| `minWidth`              | number  | `320`     | Minimum viewport width for this scale      |
+| `maxWidth`              | number  | `1760`    | Maximum viewport width for this scale      |
+| `prefix`                | string  | `"space"` | Prefix for generated CSS custom properties |
+| `generateAllCrossPairs` | boolean | `false`   | Generate cross-combinations for this scale |
+| `pairs`                 | object  | required  | Size pairs as `"name": [min, max]`         |
 
 ### Inline Function Syntax
 
@@ -233,21 +258,62 @@ All options can be overridden per `@ruler scale()` declaration:
 ruler.fluid(minSize, maxSize[, minWidth, maxWidth])
 ```
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `minSize` | number | Yes | Minimum size in pixels |
-| `maxSize` | number | Yes | Maximum size in pixels |
-| `minWidth` | number | No | Minimum viewport width (uses config default) |
-| `maxWidth` | number | No | Maximum viewport width (uses config default) |
+| Parameter  | Type   | Required | Description                                  |
+| ---------- | ------ | -------- | -------------------------------------------- |
+| `minSize`  | number | Yes      | Minimum size in pixels                       |
+| `maxSize`  | number | Yes      | Maximum size in pixels                       |
+| `minWidth` | number | No       | Minimum viewport width (uses config default) |
+| `maxWidth` | number | No       | Maximum viewport width (uses config default) |
+
+### Static Values
+
+When min and max values are equal, postcss-ruler outputs a simple rem value instead of a clamp() function. This works in all three modes:
+
+**Inline function:**
+
+```css
+.element {
+  font-size: ruler.fluid(20, 20);
+}
+```
+
+**Generates:**
+
+```css
+.element {
+  font-size: 1.25rem;
+}
+```
+
+**Scale generation:**
+
+```css
+@ruler scale({
+  prefix: 'size',
+  pairs: {
+    "static": [16, 16],
+    "fluid": [16, 24]
+  }
+});
+```
+
+**Generates:**
+
+```css
+--size-static: 1rem;
+--size-fluid: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+```
+
+**Use case:** Mix static and fluid values in the same scale for consistency. Define your base unit as a static value and let other sizes scale fluidly from it.
 
 ### Utility Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `selector` | string | required | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
-| `property` | string or array | required | CSS property name(s) to apply the scale values to |
-| `scale` | string | required | Name of a previously defined scale (the `prefix` value) |
-| `generateAllCrossPairs` | boolean | No | Include/exclude cross-pairs (overrides scale default) |
+| Option                  | Type            | Default  | Description                                                           |
+| ----------------------- | --------------- | -------- | --------------------------------------------------------------------- |
+| `selector`              | string          | required | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
+| `property`              | string or array | required | CSS property name(s) to apply the scale values to                     |
+| `scale`                 | string          | required | Name of a previously defined scale (the `prefix` value)               |
+| `generateAllCrossPairs` | boolean         | No       | Include/exclude cross-pairs (overrides scale default)                 |
 
 ## How It Works
 
@@ -319,6 +385,7 @@ Generate a complete set of utility classes from your design system:
 ```
 
 Use in your HTML:
+
 ```html
 <section class="p-lg gap-md">
   <div class="stack gap-sm">
@@ -399,6 +466,7 @@ h2 {
 ## Browser Support
 
 The `clamp()` function is supported in all modern browsers:
+
 - Chrome 79+
 - Firefox 75+
 - Safari 13.1+
