@@ -310,3 +310,58 @@ test('generates utilities with parent context selector', async () => {
     {}
   )
 })
+
+test('inline function with equal min/max outputs static rem', async () => {
+  await run(
+    `.element {
+  font-size: ruler.fluid(20, 20);
+  padding: ruler.fluid(16, 16);
+}`,
+    `.element {
+  font-size: 1.25rem;
+  padding: 1rem;
+}`,
+    {}
+  )
+})
+
+test('scale generation with equal min/max outputs static rem', async () => {
+  await run(
+    `@ruler scale({
+  prefix: 'size',
+  pairs: {
+    "static": [16, 16],
+    "fluid": [16, 24]
+  }
+});`,
+    `--size-static: 1rem;
+--size-fluid: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);`,
+    {}
+  )
+})
+
+test('utility classes with static values output static rem', async () => {
+  await run(
+    `@ruler scale({
+  prefix: 'gap',
+  pairs: {
+    "fixed": [24, 24],
+    "fluid": [24, 32]
+  }
+});
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'gap'
+});`,
+    `--gap-fixed: 1.5rem;
+--gap-fluid: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+.gap-fixed {
+    gap: 1.5rem
+}
+.gap-fluid {
+    gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem)
+}`,
+    {}
+  )
+})
