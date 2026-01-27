@@ -1,17 +1,19 @@
-const postcss = require('postcss')
-const { equal } = require('node:assert')
-const { test } = require('node:test')
+const postcss = require("postcss");
+const { equal } = require("node:assert");
+const { test } = require("node:test");
 
-const plugin = require('./')
+const plugin = require("./");
 
 async function run(input, output, opts = {}) {
-  let result = await postcss([plugin(opts)]).process(input, { from: undefined })
-  equal(result.css, output)
-  equal(result.warnings().length, 0)
+  let result = await postcss([plugin(opts)]).process(input, {
+    from: undefined,
+  });
+  equal(result.css, output);
+  equal(result.warnings().length, 0);
 }
 
 // Test basic utility class generation with CSS custom property
-test('generates utility classes with CSS custom property', async () => {
+test("generates utility classes with CSS custom property", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -33,12 +35,12 @@ test('generates utility classes with CSS custom property', async () => {
     .stack-space-sm {
     --stack-space: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test utility generation with regular CSS property
-test('generates utility classes with regular CSS property', async () => {
+test("generates utility classes with regular CSS property", async () => {
   await run(
     `@ruler scale({
       prefix: 'size',
@@ -60,12 +62,12 @@ test('generates utility classes with regular CSS property', async () => {
     .w-md {
     width: clamp(12.5rem, 13.8889vw + 9.7222rem, 25rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test utility generation with multiple properties
-test('generates utility classes with multiple properties', async () => {
+test("generates utility classes with multiple properties", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -83,12 +85,12 @@ test('generates utility classes with multiple properties', async () => {
     padding-top: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
     padding-bottom: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test utility with generateAllCrossPairs enabled on scale
-test('generates utility classes including cross-pairs when scale has them', async () => {
+test("generates utility classes including cross-pairs when scale has them", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -115,12 +117,12 @@ test('generates utility classes including cross-pairs when scale has them', asyn
     .gap-xs-sm {
     gap: clamp(0.5rem, 1.1111vw + 0.2778rem, 1.5rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test utility with generateAllCrossPairs: false to exclude cross-pairs
-test('excludes cross-pairs when generateAllCrossPairs is false', async () => {
+test("excludes cross-pairs when generateAllCrossPairs is false", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -145,12 +147,12 @@ test('excludes cross-pairs when generateAllCrossPairs is false', async () => {
     .gap-sm {
     gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test error when scale doesn't exist
-test('throws error when scale does not exist', async () => {
+test("throws error when scale does not exist", async () => {
   try {
     await run(
       `@ruler utility({
@@ -158,21 +160,21 @@ test('throws error when scale does not exist', async () => {
         property: 'gap',
         scale: 'nonexistent'
       });`,
-      '',
-      {}
-    )
-    throw new Error('Should have thrown an error')
+      "",
+      {},
+    );
+    throw new Error("Should have thrown an error");
   } catch (err) {
     equal(
       err.message.includes('Scale "nonexistent" not found'),
       true,
-      'Should throw error about missing scale'
-    )
+      "Should throw error about missing scale",
+    );
   }
-})
+});
 
 // Test error when required parameters are missing
-test('throws error when selector parameter is missing', async () => {
+test("throws error when selector parameter is missing", async () => {
   try {
     await run(
       `@ruler scale({
@@ -183,21 +185,21 @@ test('throws error when selector parameter is missing', async () => {
         property: 'gap',
         scale: 'space'
       });`,
-      '',
-      {}
-    )
-    throw new Error('Should have thrown an error')
+      "",
+      {},
+    );
+    throw new Error("Should have thrown an error");
   } catch (err) {
     equal(
       err.message.includes('requires a "selector" parameter'),
       true,
-      'Should throw error about missing selector'
-    )
+      "Should throw error about missing selector",
+    );
   }
-})
+});
 
 // Test nested selector with & modifier
-test('generates utilities with nested & modifier selector', async () => {
+test("generates utilities with nested & modifier selector", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -219,12 +221,12 @@ test('generates utilities with nested & modifier selector', async () => {
     &.space-sm {
     gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test multiple class selector
-test('generates utilities with multiple class selector', async () => {
+test("generates utilities with multiple class selector", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -241,12 +243,12 @@ test('generates utilities with multiple class selector', async () => {
     .container.space-xs {
     gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test ID selector
-test('generates utilities with ID selector', async () => {
+test("generates utilities with ID selector", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -263,12 +265,12 @@ test('generates utilities with ID selector', async () => {
     #section-sm {
     padding: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test element selector
-test('generates utilities with element selector', async () => {
+test("generates utilities with element selector", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -285,12 +287,12 @@ test('generates utilities with element selector', async () => {
     section-md {
     margin: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
 // Test parent context selector
-test('generates utilities with parent context selector', async () => {
+test("generates utilities with parent context selector", async () => {
   await run(
     `@ruler scale({
       prefix: 'space',
@@ -307,11 +309,11 @@ test('generates utilities with parent context selector', async () => {
     .container &-xs {
     gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
-test('inline function with equal min/max outputs static rem', async () => {
+test("inline function with equal min/max outputs static rem", async () => {
   await run(
     `.element {
   font-size: ruler.fluid(20, 20);
@@ -321,11 +323,11 @@ test('inline function with equal min/max outputs static rem', async () => {
   font-size: 1.25rem;
   padding: 1rem;
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
 
-test('scale generation with equal min/max outputs static rem', async () => {
+test("scale generation with equal min/max outputs static rem", async () => {
   await run(
     `@ruler scale({
   prefix: 'size',
@@ -336,11 +338,11 @@ test('scale generation with equal min/max outputs static rem', async () => {
 });`,
     `--size-static: 1rem;
 --size-fluid: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);`,
-    {}
-  )
-})
+    {},
+  );
+});
 
-test('utility classes with static values output static rem', async () => {
+test("utility classes with static values output static rem", async () => {
   await run(
     `@ruler scale({
   prefix: 'gap',
@@ -362,6 +364,34 @@ test('utility classes with static values output static rem', async () => {
 .gap-fluid {
     gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem)
 }`,
-    {}
-  )
-})
+    {},
+  );
+});
+
+test("throws error when min > max", async () => {
+  let error;
+  try {
+    await run(
+      `.element {
+  font-size: ruler.fluid(24, 16);
+}`,
+      "",
+      {},
+    );
+  } catch (e) {
+    error = e;
+  }
+  equal(error.message.includes("min (24) must be less than max (16)"), true);
+});
+
+test("handles mixed static and fluid values in same declaration", async () => {
+  await run(
+    `.element {
+  margin: ruler.fluid(16, 16) ruler.fluid(16, 24);
+}`,
+    `.element {
+  margin: 1rem clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+}`,
+    {},
+  );
+});
