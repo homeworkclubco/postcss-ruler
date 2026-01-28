@@ -191,7 +191,9 @@ test("throws error when selector parameter is missing", async () => {
     throw new Error("Should have thrown an error");
   } catch (err) {
     equal(
-      err.message.includes('requires either "selector" or "attribute" parameter'),
+      err.message.includes(
+        'requires either "selector" or "attribute" parameter',
+      ),
       true,
       "Should throw error about missing selector or attribute",
     );
@@ -535,9 +537,239 @@ test("throws error when attribute parameter contains invalid characters", async 
     throw new Error("Should have thrown an error");
   } catch (err) {
     equal(
-      err.message.includes("must contain only letters, numbers, hyphens, and underscores"),
+      err.message.includes(
+        "must contain only letters, numbers, hyphens, and underscores",
+      ),
       true,
       "Should throw error about invalid attribute characters",
     );
   }
+});
+
+// Test lowSpecificity with regular class selector
+test("generates utilities with :where() wrapper when lowSpecificity is true", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16],
+        "sm": [16, 24]
+      }
+    });
+    @ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space',
+      lowSpecificity: true
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+    :where(.gap-xs) {
+    gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}
+    :where(.gap-sm) {
+    gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity with attribute selector
+test("generates attribute utilities with :where() wrapper when lowSpecificity is true", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'size',
+      pairs: {
+        "xs": [16, 20],
+        "sm": [20, 24]
+      }
+    });
+    @ruler utility({
+      attribute: 'data-size',
+      property: 'font-size',
+      scale: 'size',
+      lowSpecificity: true
+    });`,
+    `--size-xs: clamp(1rem, 0.2778vw + 0.9444rem, 1.25rem);
+--size-sm: clamp(1.25rem, 0.2778vw + 1.1944rem, 1.5rem);
+    :where([data-size="xs"]) {
+    font-size: var(--size-xs)
+}
+    :where([data-size="sm"]) {
+    font-size: var(--size-sm)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity with combined selector and attribute
+test("generates combined selector+attribute with :where() wrapper", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'size',
+      pairs: {
+        "md": [24, 32]
+      }
+    });
+    @ruler utility({
+      selector: '.heading',
+      attribute: 'data-size',
+      property: 'font-size',
+      scale: 'size',
+      lowSpecificity: true
+    });`,
+    `--size-md: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+    :where(.heading[data-size="md"]) {
+    font-size: var(--size-md)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity with parent context selector
+test("generates parent context selector with :where() wrapper on child part", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16]
+      }
+    });
+    @ruler utility({
+      selector: '.container &',
+      property: 'gap',
+      scale: 'space',
+      lowSpecificity: true
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+    .container :where(&-xs) {
+    gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity with nested & selector
+test("generates nested & selector with :where() wrapper", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "sm": [16, 24]
+      }
+    });
+    @ruler utility({
+      selector: '&.active',
+      property: 'padding',
+      scale: 'space',
+      lowSpecificity: true
+    });`,
+    `--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+    :where(&.active-sm) {
+    padding: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity from global config
+test("applies lowSpecificity from global config", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16]
+      }
+    });
+    @ruler utility({
+      selector: '.m',
+      property: 'margin',
+      scale: 'space'
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+    :where(.m-xs) {
+    margin: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}`,
+    { lowSpecificity: true },
+  );
+});
+
+// Test lowSpecificity override (global true, utility false)
+test("utility lowSpecificity parameter overrides global config", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16]
+      }
+    });
+    @ruler utility({
+      selector: '.p',
+      property: 'padding',
+      scale: 'space',
+      lowSpecificity: false
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+    .p-xs {
+    padding: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}`,
+    { lowSpecificity: true },
+  );
+});
+
+// Test lowSpecificity with cross-pairs
+test("generates cross-pairs with :where() wrapper", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      generateAllCrossPairs: true,
+      pairs: {
+        "xs": [8, 16],
+        "sm": [16, 24]
+      }
+    });
+    @ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space',
+      lowSpecificity: true
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+--space-xs-sm: clamp(0.5rem, 1.1111vw + 0.2778rem, 1.5rem);
+    :where(.gap-xs) {
+    gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}
+    :where(.gap-sm) {
+    gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
+}
+    :where(.gap-xs-sm) {
+    gap: clamp(0.5rem, 1.1111vw + 0.2778rem, 1.5rem)
+}`,
+    {},
+  );
+});
+
+// Test lowSpecificity with multiple properties
+test("generates utilities with :where() and multiple properties", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16]
+      }
+    });
+    @ruler utility({
+      selector: '.p-block',
+      property: ["padding-top", "padding-bottom"],
+      scale: 'space',
+      lowSpecificity: true
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+    :where(.p-block-xs) {
+    padding-top: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+    padding-bottom: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}`,
+    {},
+  );
 });

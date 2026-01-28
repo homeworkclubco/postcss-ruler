@@ -230,15 +230,108 @@ Convert individual values directly to `clamp()` functions:
 }
 ```
 
+### 4. Low Specificity Mode: Zero-Specificity Utilities
+
+Wrap generated selectors in `:where()` to reduce their specificity to 0, making them easier to override:
+
+```css
+@ruler scale({
+  prefix: 'space',
+  pairs: {
+    "xs": [8, 16],
+    "sm": [16, 24]
+  }
+});
+
+/* Enable lowSpecificity per utility */
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'space',
+  lowSpecificity: true
+});
+```
+
+**Generates:**
+
+```css
+--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+
+:where(.gap-xs) {
+  gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+}
+:where(.gap-sm) {
+  gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+}
+```
+
+**Specificity comparison:**
+
+- `.gap-xs` → specificity (0,1,0)
+- `:where(.gap-xs)` → specificity (0,0,0)
+
+**Use case:** Design system utilities that should be easily overridable without `!important`:
+
+```css
+/* Utility with zero specificity */
+:where(.gap-md) {
+  gap: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+}
+
+/* Easy to override with a simple class */
+.custom-layout {
+  gap: 2rem; /* This wins without !important */
+}
+```
+
+**Works with attribute mode:**
+
+```css
+@ruler utility({
+  attribute: 'data-size',
+  property: 'font-size',
+  scale: 'size',
+  lowSpecificity: true
+});
+```
+
+**Generates:**
+
+```css
+:where([data-size="xs"]) {
+  font-size: var(--size-xs);
+}
+:where([data-size="sm"]) {
+  font-size: var(--size-sm);
+}
+```
+
+**Global configuration:**
+
+```javascript
+// postcss.config.js
+module.exports = {
+  plugins: {
+    "postcss-ruler": {
+      lowSpecificity: true, // All utilities use :where() by default
+    },
+  },
+};
+```
+
+You can override the global setting per utility by explicitly setting `lowSpecificity: false`.
+
 ## Configuration Options
 
 ### Plugin Options
 
-| Option                  | Type    | Default | Description                               |
-| ----------------------- | ------- | ------- | ----------------------------------------- |
-| `minWidth`              | number  | `320`   | Default minimum viewport width in pixels  |
-| `maxWidth`              | number  | `1760`  | Default maximum viewport width in pixels  |
-| `generateAllCrossPairs` | boolean | `false` | Generate cross-combinations in scale mode |
+| Option                  | Type    | Default | Description                                                    |
+| ----------------------- | ------- | ------- | -------------------------------------------------------------- |
+| `minWidth`              | number  | `320`   | Default minimum viewport width in pixels                       |
+| `maxWidth`              | number  | `1760`  | Default maximum viewport width in pixels                       |
+| `generateAllCrossPairs` | boolean | `false` | Generate cross-combinations in scale mode                      |
+| `lowSpecificity`        | boolean | `false` | Wrap utility selectors in `:where()` to lower specificity to 0 |
 
 ### At-Rule Options
 
@@ -308,12 +401,13 @@ When min and max values are equal, postcss-ruler outputs a simple rem value inst
 
 ### Utility Options
 
-| Option                  | Type            | Default  | Description                                                           |
-| ----------------------- | --------------- | -------- | --------------------------------------------------------------------- |
-| `selector`              | string          | required | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`) |
-| `property`              | string or array | required | CSS property name(s) to apply the scale values to                     |
-| `scale`                 | string          | required | Name of a previously defined scale (the `prefix` value)               |
-| `generateAllCrossPairs` | boolean         | No       | Include/exclude cross-pairs (overrides scale default)                 |
+| Option                  | Type            | Default  | Description                                                                       |
+| ----------------------- | --------------- | -------- | --------------------------------------------------------------------------------- |
+| `selector`              | string          | required | Any valid CSS selector pattern (e.g., `.gap`, `&.active`, `#section`)             |
+| `property`              | string or array | required | CSS property name(s) to apply the scale values to                                 |
+| `scale`                 | string          | required | Name of a previously defined scale (the `prefix` value)                           |
+| `generateAllCrossPairs` | boolean         | No       | Include/exclude cross-pairs (overrides scale default)                             |
+| `lowSpecificity`        | boolean         | No       | Wrap selectors in `:where()` to reduce specificity to 0 (overrides global config) |
 
 ## How It Works
 

@@ -8,6 +8,7 @@ module.exports = (opts) => {
     minWidth: 320,
     maxWidth: 1760,
     generateAllCrossPairs: false,
+    lowSpecificity: false,
   };
   const config = Object.assign(DEFAULTS, opts);
 
@@ -202,6 +203,7 @@ module.exports = (opts) => {
       scale: null,
       generateAllCrossPairs: null,
       attribute: null,
+      lowSpecificity: null,
     };
 
     for (let i = 0; i < params.length; i++) {
@@ -239,6 +241,10 @@ module.exports = (opts) => {
           break;
         case "generateAllCrossPairs":
           utilityParams.generateAllCrossPairs = value === "true";
+          i++;
+          break;
+        case "lowSpecificity":
+          utilityParams.lowSpecificity = value === "true";
           i++;
           break;
       }
@@ -309,16 +315,21 @@ module.exports = (opts) => {
 
     const utilityParams = parseUtilityParams(params);
 
+    // Resolve lowSpecificity from config if not explicitly set
+    if (utilityParams.lowSpecificity === null) {
+      utilityParams.lowSpecificity = config.lowSpecificity;
+    }
+
     // Validate attribute-specific constraints first
     if (utilityParams.attribute !== null) {
       if (utilityParams.attribute === "") {
         throw new Error(
-          '[postcss-ruler] @ruler utility() attribute parameter cannot be empty',
+          "[postcss-ruler] @ruler utility() attribute parameter cannot be empty",
         );
       }
       if (!/^[a-zA-Z0-9_-]+$/.test(utilityParams.attribute)) {
         throw new Error(
-          '[postcss-ruler] @ruler utility() attribute parameter must contain only letters, numbers, hyphens, and underscores',
+          "[postcss-ruler] @ruler utility() attribute parameter must contain only letters, numbers, hyphens, and underscores",
         );
       }
     }
@@ -368,13 +379,31 @@ module.exports = (opts) => {
       if (utilityParams.attribute) {
         // Attribute mode: [data-attr="value"] or .class[data-attr="value"]
         const attrSelector = `[${utilityParams.attribute}="${item.label}"]`;
-        ruleSelector = utilityParams.selector
+        const baseSelector = utilityParams.selector
           ? `${utilityParams.selector}${attrSelector}`
           : attrSelector;
+        ruleSelector = utilityParams.lowSpecificity
+          ? `:where(${baseSelector})`
+          : baseSelector;
         ruleValue = `var(--${utilityParams.scale}-${item.label})`;
       } else {
         // Class mode (existing behavior)
-        ruleSelector = `${utilityParams.selector}-${item.label}`;
+        const baseSelector = `${utilityParams.selector}-${item.label}`;
+
+        // Handle parent context selectors (e.g., ".container &")
+        if (utilityParams.lowSpecificity) {
+          if (utilityParams.selector.endsWith(" &")) {
+            // Parent context: ".container &" -> ".container :where(&-xs)"
+            const parentPart = utilityParams.selector.slice(0, -1); // Remove trailing "&"
+            ruleSelector = `${parentPart}:where(&-${item.label})`;
+          } else {
+            // Regular selector: wrap entire selector
+            ruleSelector = `:where(${baseSelector})`;
+          }
+        } else {
+          ruleSelector = baseSelector;
+        }
+
         ruleValue = item.clamp;
       }
 
