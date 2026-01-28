@@ -201,6 +201,7 @@ module.exports = (opts) => {
       property: null,
       scale: null,
       generateAllCrossPairs: null,
+      attribute: null,
     };
 
     for (let i = 0; i < params.length; i++) {
@@ -213,6 +214,7 @@ module.exports = (opts) => {
       switch (key) {
         case "selector":
         case "scale":
+        case "attribute":
           utilityParams[key] = value.replace(/['"]/g, "");
           i++;
           break;
@@ -307,10 +309,24 @@ module.exports = (opts) => {
 
     const utilityParams = parseUtilityParams(params);
 
+    // Validate attribute-specific constraints first
+    if (utilityParams.attribute !== null) {
+      if (utilityParams.attribute === "") {
+        throw new Error(
+          '[postcss-ruler] @ruler utility() attribute parameter cannot be empty',
+        );
+      }
+      if (!/^[a-zA-Z0-9_-]+$/.test(utilityParams.attribute)) {
+        throw new Error(
+          '[postcss-ruler] @ruler utility() attribute parameter must contain only letters, numbers, hyphens, and underscores',
+        );
+      }
+    }
+
     // Validate required parameters
-    if (!utilityParams.selector) {
+    if (!utilityParams.selector && !utilityParams.attribute) {
       throw new Error(
-        '[postcss-ruler] @ruler utility() requires a "selector" parameter',
+        '[postcss-ruler] @ruler utility() requires either "selector" or "attribute" parameter',
       );
     }
     if (!utilityParams.property) {
@@ -346,11 +362,26 @@ module.exports = (opts) => {
 
     // Generate utility classes as PostCSS nodes
     const rules = scaleItems.map((item) => {
-      const selector = `${utilityParams.selector}-${item.label}`;
-      const rule = postcss.rule({ selector });
+      let ruleSelector;
+      let ruleValue;
+
+      if (utilityParams.attribute) {
+        // Attribute mode: [data-attr="value"] or .class[data-attr="value"]
+        const attrSelector = `[${utilityParams.attribute}="${item.label}"]`;
+        ruleSelector = utilityParams.selector
+          ? `${utilityParams.selector}${attrSelector}`
+          : attrSelector;
+        ruleValue = `var(--${utilityParams.scale}-${item.label})`;
+      } else {
+        // Class mode (existing behavior)
+        ruleSelector = `${utilityParams.selector}-${item.label}`;
+        ruleValue = item.clamp;
+      }
+
+      const rule = postcss.rule({ selector: ruleSelector });
 
       properties.forEach((prop) => {
-        rule.append(postcss.decl({ prop, value: item.clamp }));
+        rule.append(postcss.decl({ prop, value: ruleValue }));
       });
 
       return rule;

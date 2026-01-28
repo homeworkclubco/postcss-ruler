@@ -191,9 +191,9 @@ test("throws error when selector parameter is missing", async () => {
     throw new Error("Should have thrown an error");
   } catch (err) {
     equal(
-      err.message.includes('requires a "selector" parameter'),
+      err.message.includes('requires either "selector" or "attribute" parameter'),
       true,
-      "Should throw error about missing selector",
+      "Should throw error about missing selector or attribute",
     );
   }
 });
@@ -394,4 +394,150 @@ test("handles mixed static and fluid values in same declaration", async () => {
 }`,
     {},
   );
+});
+
+// Test data-attribute selector mode
+test("generates utilities with data-attribute selectors", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'size',
+      pairs: {
+        "xs": [16, 20],
+        "sm": [20, 24],
+        "md": [24, 32]
+      }
+    });
+    @ruler utility({
+      selector: '.heading',
+      attribute: 'data-size',
+      property: 'font-size',
+      scale: 'size'
+    });`,
+    `--size-xs: clamp(1rem, 0.2778vw + 0.9444rem, 1.25rem);
+--size-sm: clamp(1.25rem, 0.2778vw + 1.1944rem, 1.5rem);
+--size-md: clamp(1.5rem, 0.5556vw + 1.3889rem, 2rem);
+    .heading[data-size="xs"] {
+    font-size: var(--size-xs)
+}
+    .heading[data-size="sm"] {
+    font-size: var(--size-sm)
+}
+    .heading[data-size="md"] {
+    font-size: var(--size-md)
+}`,
+    {},
+  );
+});
+
+// Test data-attribute with empty selector
+test("generates standalone attribute selectors with empty selector", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "xs": [8, 16],
+        "sm": [16, 24]
+      }
+    });
+    @ruler utility({
+      selector: '',
+      attribute: 'data-gap',
+      property: 'gap',
+      scale: 'space'
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+    [data-gap="xs"] {
+    gap: var(--space-xs)
+}
+    [data-gap="sm"] {
+    gap: var(--space-sm)
+}`,
+    {},
+  );
+});
+
+// Test data-attribute with cross-pairs
+test("generates attribute selectors with cross-pairs preserving hyphens", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      generateAllCrossPairs: true,
+      pairs: {
+        "xs": [8, 16],
+        "sm": [16, 24]
+      }
+    });
+    @ruler utility({
+      selector: '.box',
+      attribute: 'data-space',
+      property: 'padding',
+      scale: 'space'
+    });`,
+    `--space-xs: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem);
+--space-sm: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem);
+--space-xs-sm: clamp(0.5rem, 1.1111vw + 0.2778rem, 1.5rem);
+    .box[data-space="xs"] {
+    padding: var(--space-xs)
+}
+    .box[data-space="sm"] {
+    padding: var(--space-sm)
+}
+    .box[data-space="xs-sm"] {
+    padding: var(--space-xs-sm)
+}`,
+    {},
+  );
+});
+
+// Test validation: empty attribute string
+test("throws error when attribute parameter is empty string", async () => {
+  try {
+    await run(
+      `@ruler scale({
+        prefix: 'space',
+        pairs: { "xs": [8, 16] }
+      });
+      @ruler utility({
+        attribute: '',
+        property: 'gap',
+        scale: 'space'
+      });`,
+      "",
+      {},
+    );
+    throw new Error("Should have thrown an error");
+  } catch (err) {
+    equal(
+      err.message.includes("attribute parameter cannot be empty"),
+      true,
+      "Should throw error about empty attribute",
+    );
+  }
+});
+
+// Test validation: invalid attribute characters
+test("throws error when attribute parameter contains invalid characters", async () => {
+  try {
+    await run(
+      `@ruler scale({
+        prefix: 'space',
+        pairs: { "xs": [8, 16] }
+      });
+      @ruler utility({
+        attribute: 'data size',
+        property: 'gap',
+        scale: 'space'
+      });`,
+      "",
+      {},
+    );
+    throw new Error("Should have thrown an error");
+  } catch (err) {
+    equal(
+      err.message.includes("must contain only letters, numbers, hyphens, and underscores"),
+      true,
+      "Should throw error about invalid attribute characters",
+    );
+  }
 });
