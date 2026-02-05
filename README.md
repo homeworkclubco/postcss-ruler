@@ -33,6 +33,16 @@ module.exports = {
       minWidth: 320, // Default minimum viewport width
       maxWidth: 1760, // Default maximum viewport width
       generateAllCrossPairs: false,
+      // Optional: Pre-define scales for cross-file usage (Astro, Vite, etc.)
+      scales: {
+        space: {
+          pairs: {
+            xs: [8, 16],
+            sm: [16, 24],
+            md: [24, 32],
+          },
+        },
+      },
     },
   },
 };
@@ -332,6 +342,55 @@ You can override the global setting per utility by explicitly setting `lowSpecif
 | `maxWidth`              | number  | `1760`  | Default maximum viewport width in pixels                       |
 | `generateAllCrossPairs` | boolean | `false` | Generate cross-combinations in scale mode                      |
 | `lowSpecificity`        | boolean | `false` | Wrap utility selectors in `:where()` to lower specificity to 0 |
+| `scales`                | object  | `{}`    | Pre-defined scales for cross-file usage (see below)            |
+
+### Pre-defined Scales (for Astro, Vite, etc.)
+
+When using bundlers like Astro or Vite that process CSS files in unpredictable order, you may encounter issues where `@ruler utility()` in one file can't reference a scale defined with `@ruler scale()` in another file.
+
+To solve this, define your scales in the plugin config:
+
+```javascript
+// postcss.config.js
+module.exports = {
+  plugins: {
+    "postcss-ruler": {
+      scales: {
+        space: {
+          pairs: {
+            xs: [8, 16],
+            sm: [16, 24],
+            md: [24, 32],
+            lg: [32, 48],
+          },
+        },
+        size: {
+          minWidth: 400,
+          maxWidth: 1200,
+          generateAllCrossPairs: true,
+          pairs: {
+            sm: [100, 200],
+            md: [200, 400],
+          },
+        },
+      },
+    },
+  },
+};
+```
+
+Now you can use `@ruler utility()` in any file without needing `@ruler scale()` first:
+
+```css
+/* Component.astro or any CSS file */
+@ruler utility({
+  selector: '.gap',
+  property: 'gap',
+  scale: 'space'
+});
+```
+
+**Note:** If you use `@ruler scale()` with the same prefix as a config-defined scale, the inline scale will override the config scale for that file.
 
 ### At-Rule Options
 

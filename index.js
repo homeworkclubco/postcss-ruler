@@ -9,6 +9,7 @@ module.exports = (opts) => {
     maxWidth: 1760,
     generateAllCrossPairs: false,
     lowSpecificity: false,
+    scales: {},
   };
   const config = Object.assign(DEFAULTS, opts);
 
@@ -111,6 +112,35 @@ module.exports = (opts) => {
 
     return clampScales;
   };
+
+  /**
+   * Pre-processes scales defined in plugin config
+   * @param {Object} configScales - Scales object from plugin options
+   */
+  const initializeConfigScales = (configScales) => {
+    Object.entries(configScales).forEach(([prefix, scaleConfig]) => {
+      const scaleOpts = {
+        minWidth: scaleConfig.minWidth || config.minWidth,
+        maxWidth: scaleConfig.maxWidth || config.maxWidth,
+        generateAllCrossPairs:
+          scaleConfig.generateAllCrossPairs ?? config.generateAllCrossPairs,
+      };
+
+      const clampPairs = Object.entries(scaleConfig.pairs).map(
+        ([name, values]) => ({ name, values }),
+      );
+
+      scales[prefix] = generateClamps({
+        pairs: clampPairs,
+        ...scaleOpts,
+      });
+    });
+  };
+
+  // Initialize scales from config (if any)
+  if (Object.keys(config.scales).length > 0) {
+    initializeConfigScales(config.scales);
+  }
 
   /**
    * Parses parameters from @fluid at-rule

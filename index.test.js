@@ -773,3 +773,116 @@ test("generates utilities with :where() and multiple properties", async () => {
     {},
   );
 });
+
+// Test config-defined scales (for cross-file usage in Astro/bundlers)
+test("uses scales defined in plugin config", async () => {
+  await run(
+    `@ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space'
+    });`,
+    `.gap-xs {
+    gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}
+.gap-sm {
+    gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
+}`,
+    {
+      scales: {
+        space: {
+          pairs: {
+            xs: [8, 16],
+            sm: [16, 24],
+          },
+        },
+      },
+    },
+  );
+});
+
+// Test config-defined scales with custom minWidth/maxWidth
+test("config scales respect custom viewport widths", async () => {
+  await run(
+    `@ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space'
+    });`,
+    `.gap-xs {
+    gap: clamp(0.5rem, 1.3333vw + 0.1667rem, 1rem)
+}`,
+    {
+      scales: {
+        space: {
+          minWidth: 400,
+          maxWidth: 1000,
+          pairs: {
+            xs: [8, 16],
+          },
+        },
+      },
+    },
+  );
+});
+
+// Test config scales with generateAllCrossPairs
+test("config scales support generateAllCrossPairs", async () => {
+  await run(
+    `@ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space'
+    });`,
+    `.gap-xs {
+    gap: clamp(0.5rem, 0.5556vw + 0.3889rem, 1rem)
+}
+.gap-sm {
+    gap: clamp(1rem, 0.5556vw + 0.8889rem, 1.5rem)
+}
+.gap-xs-sm {
+    gap: clamp(0.5rem, 1.1111vw + 0.2778rem, 1.5rem)
+}`,
+    {
+      scales: {
+        space: {
+          generateAllCrossPairs: true,
+          pairs: {
+            xs: [8, 16],
+            sm: [16, 24],
+          },
+        },
+      },
+    },
+  );
+});
+
+// Test that inline @ruler scale() overrides config scale
+test("inline scale overrides config scale with same prefix", async () => {
+  await run(
+    `@ruler scale({
+      prefix: 'space',
+      pairs: {
+        "md": [24, 48]
+      }
+    });
+    @ruler utility({
+      selector: '.gap',
+      property: 'gap',
+      scale: 'space'
+    });`,
+    `--space-md: clamp(1.5rem, 1.6667vw + 1.1667rem, 3rem);
+    .gap-md {
+    gap: clamp(1.5rem, 1.6667vw + 1.1667rem, 3rem)
+}`,
+    {
+      scales: {
+        space: {
+          pairs: {
+            xs: [8, 16],
+          },
+        },
+      },
+    },
+  );
+});
